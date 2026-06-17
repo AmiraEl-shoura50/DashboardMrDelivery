@@ -102,9 +102,24 @@ img { display: block; max-width: 100%; }
   position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
 }
 .menu-toggle {
-  display: none; background: none; border: none; color: var(--text);
-  font-size: 1.3rem; cursor: pointer; padding: 4px 6px;
+  position: relative;
+  width: 36px; height: 36px; flex-shrink: 0;
+  display: none; align-items: center; justify-content: center;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 9px; cursor: pointer; transition: all .2s;
 }
+.menu-toggle:hover { border-color: var(--border2); background: var(--bg4); }
+.menu-toggle .hb-bar {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 18px; height: 2px; background: var(--text); border-radius: 2px;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+}
+.menu-toggle .hb-bar:nth-child(1) { top: 11px; }
+.menu-toggle .hb-bar:nth-child(2) { top: 17px; }
+.menu-toggle .hb-bar:nth-child(3) { top: 23px; }
+.menu-toggle.open .hb-bar:nth-child(1) { transform: translateX(-50%) rotate(45deg); top: 17px; }
+.menu-toggle.open .hb-bar:nth-child(2) { opacity: 0; transform: translateX(-50%) scaleX(0); }
+.menu-toggle.open .hb-bar:nth-child(3) { transform: translateX(-50%) rotate(-45deg); top: 17px; }
 .tb-title { font-family: 'Tajawal', sans-serif; font-size: 1.2rem; font-weight: 900; }
 .tb-sub { font-size: .74rem; color: var(--muted); margin-top: 1px; }
 .tb-right { margin-right: auto; display: flex; align-items: center; gap: 10px; }
@@ -468,6 +483,95 @@ img { display: block; max-width: 100%; }
   .filter-bar { flex-direction: column; align-items: stretch; }
   .search-wrap input { width: 100%; }
 }
+
+/* ══════════════════════════════════════
+    SIDEBAR BACKDROP (Mobile)
+══════════════════════════════════════ */
+.sidebar-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 190;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  opacity: 0; pointer-events: none; transition: opacity .35s ease;
+}
+.sidebar-backdrop.show { opacity: 1; pointer-events: all; }
+@media (max-width: 860px) { .sidebar-backdrop { display: block; } }
+
+/* ══════════════════════════════════════
+    IMAGE SKELETON / LAZY LOAD
+══════════════════════════════════════ */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.img-skeleton {
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+.lazy-img { opacity: 0; transition: opacity .4s ease; }
+.lazy-img.loaded { opacity: 1; }
+
+/* ══════════════════════════════════════
+    HORIZONTAL MENU SCROLL STRIP
+══════════════════════════════════════ */
+.menu-scroll-outer { position: relative; padding: 0 8px; }
+.menu-scroll-strip {
+  display: flex; gap: 16px;
+  overflow-x: auto; scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 2px 16px;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.menu-scroll-strip::-webkit-scrollbar { height: 5px; }
+.menu-scroll-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+.menu-scroll-strip .prev-card { min-width: 200px; max-width: 220px; flex-shrink: 0; }
+.scroll-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text); font-size: 1.15rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 10; transition: all .25s;
+  box-shadow: 0 4px 14px rgba(0,0,0,.45);
+  opacity: 0; pointer-events: none;
+}
+.menu-scroll-outer:hover .scroll-arrow { opacity: 1; pointer-events: all; }
+.scroll-arrow:hover { background: var(--or); border-color: var(--or); color: #fff; transform: translateY(-50%) scale(1.1); }
+.scroll-arrow.arrow-prev { left: -10px; }
+.scroll-arrow.arrow-next { right: -10px; }
+@media (max-width: 860px) { .scroll-arrow { display: none !important; } }
+
+/* ══════════════════════════════════════
+    INNER MENU IMAGE CAROUSEL
+══════════════════════════════════════ */
+.menu-img-rel {
+  position: relative; overflow: hidden;
+  height: 140px; border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--bg3);
+}
+.menu-img-carousel {
+  display: flex; height: 140px;
+  overflow-x: auto; scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.menu-img-carousel::-webkit-scrollbar { display: none; }
+.menu-img-carousel img {
+  min-width: 100%; width: 100%; height: 140px;
+  object-fit: cover; flex-shrink: 0; display: block;
+}
+.menu-pages-pill {
+  position: absolute; bottom: 8px; right: 8px;
+  background: rgba(0,0,0,.65); color: #fff;
+  font-size: .62rem; font-weight: 800; padding: 3px 9px;
+  border-radius: 20px; backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+.menu-empty-icon {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5rem; color: var(--muted);
+}
 </style>
 </head>
 <body>
@@ -494,11 +598,16 @@ img { display: block; max-width: 100%; }
       <div><div class="sb-uname" id="uName">مستر ديليفري</div><div class="sb-urole" id="uRole">مدير المتجر</div></div>
     </div>
   </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
   <div class="main">
 
     <header class="topbar">
-      <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="القائمة">
+        <span class="hb-bar"></span>
+        <span class="hb-bar"></span>
+        <span class="hb-bar"></span>
+      </button>
       <div>
         <div class="tb-title" id="vTitle">نظرة عامة</div>
         <div class="tb-sub"   id="vSub">مرحباً بك في لوحة التحكم</div>
@@ -598,9 +707,10 @@ img { display: block; max-width: 100%; }
 
   </div>
 
-  <div
-    class="preview-grid"
-    id="restaurantMenusList">
+  <div class="menu-scroll-outer">
+    <button class="scroll-arrow arrow-prev" onclick="scrollMenus(-1)" title="السابق">&#8249;</button>
+    <div class="menu-scroll-strip" id="restaurantMenusList"></div>
+    <button class="scroll-arrow arrow-next" onclick="scrollMenus(1)" title="التالي">&#8250;</button>
   </div>
 
 </div>
@@ -1059,14 +1169,52 @@ if(!images.length) {
     currentView = viewId;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
-    
+
     document.getElementById(`v-${viewId}`).classList.add('active');
     if(event && event.currentTarget) {
       event.currentTarget.classList.add('active');
     }
-    
-    const titles = { overview: 'نظرة عامة', categories: 'إدارة الأقسام', offers: 'إدارة العروض' ,menus: 'إدارة منيو المطاعم'};
+
+    const titles = { overview: 'نظرة عامة', categories: 'إدارة الأقسام', offers: 'إدارة العروض', menus: 'إدارة منيو المطاعم' };
     document.getElementById('vTitle').innerText = titles[viewId] || 'لوحة التحكم';
+
+    // Auto-close sidebar on mobile after navigation
+    if (window.innerWidth <= 860) closeSidebar();
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.contains('open') ? closeSidebar() : openSidebar();
+  }
+
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    const bd = document.getElementById('sidebarBackdrop');
+    const tg = document.getElementById('menuToggle');
+    if (bd) bd.classList.add('show');
+    if (tg) tg.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    const bd = document.getElementById('sidebarBackdrop');
+    const tg = document.getElementById('menuToggle');
+    if (bd) bd.classList.remove('show');
+    if (tg) tg.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function scrollMenus(dir) {
+    const strip = document.getElementById('restaurantMenusList');
+    if (strip) strip.scrollBy({ left: dir * 280, behavior: 'smooth' });
+  }
+
+  function filterMenus() {
+    const q = (document.getElementById('menuSearch')?.value || '').toLowerCase();
+    document.querySelectorAll('#restaurantMenusList .prev-card').forEach(card => {
+      const name = (card.querySelector('.prev-name')?.textContent || '').toLowerCase();
+      card.style.display = name.includes(q) ? '' : 'none';
+    });
   }
 
   function renderCategories(data) {
@@ -1090,14 +1238,18 @@ if(!images.length) {
       }
 
       let bgStyle = cat.imgUrl ? '' : `background:${cat.color || 'var(--bg3)'}`;
-      let mediaContent = cat.imgUrl ? `<img src="${cat.imgUrl}">` : `<div class="cat-cover-emoji">${cat.emoji || '🍔'}</div>`;
-      
+      let coverClass = 'cat-cover' + (cat.imgUrl ? ' img-skeleton' : '');
+      let mediaContent = cat.imgUrl
+        ? `<img class="lazy-img" src="${cat.imgUrl}" loading="lazy" decoding="async"
+             onload="this.classList.add('loaded');const p=this.closest('.img-skeleton');if(p)p.classList.remove('img-skeleton')">`
+        : `<div class="cat-cover-emoji">${cat.emoji || '🍔'}</div>`;
+
       grid.innerHTML += `
         <div class="cat-card">
-          <div class="cat-cover" style="${bgStyle}">${mediaContent}</div>
+          <div class="${coverClass}" style="${bgStyle}">${mediaContent}</div>
           <div class="cat-body">
             <div class="cat-name">${cat.name}</div>
-            <div class="cat-meta">عدد العروض: ${offerCount}</div> 
+            <div class="cat-meta">عدد العروض: ${offerCount}</div>
             <div class="cat-actions">
               <button class="btn btn-ghost btn-sm" style="flex:1" onclick="editCat('${key}')">✏️</button>
               <button class="btn btn-danger btn-sm" onclick="triggerDeleteCat('${key}')">🗑️</button>
@@ -1121,18 +1273,23 @@ if(!images.length) {
       return;
     }
 
+    // Lazy-load helper
+    const lazyThumb = (src, extraClass = '') =>
+      `<img class="offer-thumb lazy-img ${extraClass}" src="${src}" loading="lazy" decoding="async"
+        onload="this.classList.add('loaded')">`;
+
     let html = '';
     keys.forEach(key => {
       const off = data[key];
       const catName = window.categories && window.categories[off.catId] ? window.categories[off.catId].name : 'قسم غير معروف';
-      
+
       html += `
         <div class="offer-row" data-cat="${off.catId}" data-name="${off.name.toLowerCase()}">
-          ${off.imgUrl ? `<img class="offer-thumb" src="${off.imgUrl}">` : `<div class="offer-no-img">📸</div>`}
+          ${off.imgUrl ? lazyThumb(off.imgUrl) : `<div class="offer-no-img">📸</div>`}
           <div class="offer-info">
             <div class="offer-name">${off.name} ${off.badge ? `<span class="badge badge-or">${off.badge}</span>` : ''}</div>
             <div class="offer-meta">
-              <span>📍 ${off.place || 'المتجر'}</span> • 
+              <span>📍 ${off.place || 'المتجر'}</span> •
               <span class="badge badge-blue">📂 ${catName}</span>
             </div>
           </div>
@@ -1153,7 +1310,7 @@ if(!images.length) {
     sorted.forEach(off => {
       recent.innerHTML += `
         <div class="offer-row">
-          ${off.imgUrl ? `<img class="offer-thumb" src="${off.imgUrl}">` : `<div class="offer-no-img">📸</div>`}
+          ${off.imgUrl ? lazyThumb(off.imgUrl) : `<div class="offer-no-img">📸</div>`}
           <div class="offer-info">
             <div class="offer-name">${off.name}</div>
             <div class="offer-meta"><span>📍 ${off.place || 'المتجر'}</span></div>
@@ -1165,63 +1322,49 @@ if(!images.length) {
     });
   }
 function renderRestaurantMenus() {
-
-  const list =
-    document.getElementById(
-      'restaurantMenusList'
-    );
-
+  const list = document.getElementById('restaurantMenusList');
   if (!list) return;
 
-  const menus =
-    Object.entries(
-      window.restaurantMenus || {}
-    );
+  const allMenus = window.restaurantMenus || {};
+  const mCntEl  = document.getElementById('mCnt');
+  if (mCntEl) mCntEl.innerText = Object.keys(allMenus).length;
+
+  const menus = Object.entries(allMenus);
 
   if (menus.length === 0) {
-
     list.innerHTML = `
-      <div class="empty-state">
+      <div class="empty-state" style="min-width:260px">
         <div class="ei">📋</div>
         <p>لا توجد منيوهات مضافة</p>
-      </div>
-    `;
-
+      </div>`;
     return;
   }
 
   let html = '';
-
   menus.forEach(([id, menu]) => {
+    const images = menu.menuImages || [];
+
+    const carouselImgs = images.length
+      ? images.map(url =>
+          `<img class="lazy-img" src="${url}" alt="${menu.restaurantName}"
+            loading="lazy" decoding="async"
+            onload="this.classList.add('loaded')">`
+        ).join('')
+      : `<div class="menu-empty-icon">🍽️</div>`;
 
     html += `
-
       <div class="prev-card">
-
-         <div class="prev-img-wrap">
-
-      <img
-        src="${menu.menuImages?.[0] || ''}"
-        alt="${menu.restaurantName}">
-
-      <div class="prev-badge-abs">
-        ${menu.menuImages?.length || 0} صفحات
-      </div>
-
-    </div>
-
-
-        <div class="prev-body">
-
-          <div class="prev-name">
-            ${menu.restaurantName}
-          </div>
-
+        <div class="menu-img-rel">
+          <div class="menu-img-carousel">${carouselImgs}</div>
+          ${images.length > 1
+            ? `<div class="menu-pages-pill">📄 ${images.length} صفحات</div>`
+            : ''}
         </div>
-
-      </div>
-
-    `;
+        <div class="prev-body">
+          <div class="prev-name">${menu.restaurantName}</div>
+          <div class="prev-place">${images.length} ${images.length === 1 ? 'صورة' : 'صور'}</div>
+        </div>
+      </div>`;
   });
 
   list.innerHTML = html;
