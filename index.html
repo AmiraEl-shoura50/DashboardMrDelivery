@@ -614,6 +614,75 @@ img { display: block; max-width: 100%; }
   display: flex; align-items: center; justify-content: center;
   font-size: 2.5rem; color: var(--muted);
 }
+/* ══════════════════════════════════════
+   Menue - تصميم شبكي عمودي بالكامل يمنع السكرول الأفقي
+══════════════════════════════════════ */
+#v-menus {
+  overflow-x: hidden; 
+  width: 100%;
+}
+
+.menu-scroll-outer { 
+  position: relative; 
+  padding: 0; 
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* إخفاء أسهم الكاروسيل القديمة نهائياً */
+.menu-scroll-outer .scroll-arrow {
+  display: none !important;
+}
+
+/* تحويل الشريط إلى نظام Grid متجاوب (3 كروت في السطر على الشاشات الكبيرة) */
+.menu-scroll-strip {
+  display: grid !important; 
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* يوزع الكروت تلقائياً وتكون 3 أو أكثر حسب العرض */
+  gap: 20px;
+  width: 100%;
+  padding: 10px 0;
+  overflow-x: hidden !important; /* منع السكرول الأفقي تماماً */
+}
+
+/* ضبط أبعاد الكروت داخل الجريد */
+.menu-scroll-strip .prev-card { 
+  min-width: 0 !important; 
+  max-width: 100% !important; 
+  width: 100% !important;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* تنسيق الهيدر الداخلي لوضع زر الحذف */
+.menu-card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-delete-menu {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-delete-menu:hover {
+  background: var(--red);
+  color: #fff;
+}
 </style>
 </head>
 <body>
@@ -1201,6 +1270,64 @@ if(!images.length) {
       .then(() => console.log("تم حذف المنتج بنجاح."))
       .catch((error) => console.error("فشل الحذف:", error));
   };
+
+  // الحل النهائي والأكيد: تعريف الدالة داخل الـ Module لتراها مكتبة Firebase وتنفذ الحذف فوراً
+window.deleteMenuApi = function(id) {
+  if (confirm("هل أنت متأكد من حذف هذا المنيو نهائياً؟")) {
+    
+    // الحذف المباشر باستخدام دالة remove المستوردة من مكتبة فايربيز بالمسار الصحيح
+    remove(ref(db, `restaurantMenus/${id}`))
+      .then(() => {
+        // ١. حذف الكرت من الواجهة (DOM) فوراً
+        const card = document.getElementById(`menu-card-${id}`);
+        if (card) card.remove();
+        
+        // ٢. تحديث البيانات في متغير الذاكرة المحفوظ
+        if (window.restaurantMenus && window.restaurantMenus[id]) {
+          delete window.restaurantMenus[id];
+        }
+
+        // ٣. حساب العدد الجديد للمنيوهات المتبقية
+        const newCount = window.restaurantMenus ? Object.keys(window.restaurantMenus).length : 0;
+
+        // ٤. تحديث العداد العلوي في صفحة المنيو
+        const mCntEl = document.getElementById('mCnt');
+        if (mCntEl) mCntEl.innerText = newCount;
+
+        // ٥. تحديث العداد الموجود بالسايد بار (Sidebar)
+        const sidebarBadges = document.querySelectorAll('.sidebar .badge, .nav-item .badge, .sb-counter, #sidebar-menus-count');
+        if (sidebarBadges.length > 0) {
+          sidebarBadges.forEach(badge => {
+            if (badge.closest('[href*="menu"]') || badge.closest('[onclick*="menu"]') || badge.id === 'sidebar-menus-count') {
+              badge.innerText = newCount;
+            }
+          });
+        } else {
+          // طريقة احتياطية لتحديث العداد في السايد بار بناءً على الاسم والنص
+          const menuLinks = document.querySelectorAll('aside a, .sidebar a, .sidebar-menu li, .sb-item');
+          menuLinks.forEach(link => {
+            if (link.textContent.includes('المنيوهات') || link.textContent.includes('قوائم')) {
+              const badge = link.querySelector('span, div, .badge');
+              if (badge && !isNaN(badge.innerText.trim())) {
+                badge.innerText = newCount;
+              }
+            }
+          });
+        }
+
+        // ٦. إظهار رسالة النجاح للمستخدم من خلال الـ Toast الخاص بمشروعك
+        if (typeof showToast === 'function') {
+          showToast('تم حذف المنيو بنجاح من فايربيز وتحديث العدادات');
+        } else {
+          alert('تم حذف المنيو بنجاح');
+        }
+      })
+      .catch((error) => {
+        console.error("Firebase SDK Delete Error:", error);
+        if (typeof showToast === 'function') showToast('حدث خطأ أثناء الحذف من فايربيز', 'err');
+      });
+  }
+};
 </script>
 
 <script>
@@ -1375,7 +1502,7 @@ function renderRestaurantMenus() {
 
   if (menus.length === 0) {
     list.innerHTML = `
-      <div class="empty-state" style="min-width:260px">
+      <div class="empty-state" style="width:100%">
         <div class="ei">📋</div>
         <p>لا توجد منيوهات مضافة</p>
       </div>`;
@@ -1395,7 +1522,7 @@ function renderRestaurantMenus() {
       : `<div class="menu-empty-icon">🍽️</div>`;
 
     html += `
-      <div class="prev-card">
+      <div class="prev-card" id="menu-card-${id}">
         <div class="menu-img-rel">
           <div class="menu-img-carousel">${carouselImgs}</div>
           ${images.length > 1
@@ -1403,8 +1530,13 @@ function renderRestaurantMenus() {
             : ''}
         </div>
         <div class="prev-body">
-          <div class="prev-name">${menu.restaurantName}</div>
-          <div class="prev-place">${images.length} ${images.length === 1 ? 'صورة' : 'صور'}</div>
+          <div class="menu-card-header-flex">
+            <div>
+              <div class="prev-name" style="font-size: 1.05rem; font-weight: 800;">${menu.restaurantName}</div>
+              <div class="prev-place">${images.length} ${images.length === 1 ? 'صورة' : 'صور'}</div>
+            </div>
+            <button class="btn-delete-menu" onclick="deleteMenuApi('${id}')">🗑️ حذف</button>
+          </div>
         </div>
       </div>`;
   });
