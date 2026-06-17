@@ -774,7 +774,8 @@ img { display: block; max-width: 100%; }
         <input
           type="file"
           accept="image/*"
-          onchange="uploadImg(this,'menu')">
+          multiple
+          onchange="uploadMenuImages(this)">
 
         <div class="uz-icon">📋</div>
 
@@ -784,21 +785,14 @@ img { display: block; max-width: 100%; }
 
       </div>
 
-      <input
-        type="hidden"
-        id="menuImgUrl">
-
-      <div
-        class="img-preview-box"
-        id="menuPrev"
-        style="display:none">
-
-        <img
-          id="menuPrevImg"
-          src=""
-          alt="">
-
-      </div>
+ <div
+  id="menuPreviewGrid"
+  style="
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+    gap:10px;
+    margin-top:10px;">
+</div>
 
     </div>
 
@@ -839,6 +833,8 @@ img { display: block; max-width: 100%; }
   var categories = {};
   var offers = {};
   var restaurantMenus = {};
+  var menuImages = [];
+
   // التأكد من حالة اتصال فايربيز وتحديث الإشارة فوق على اليمين
   function checkFirebaseConnection() {
     const dot = document.getElementById('fbDot');
@@ -983,20 +979,18 @@ window.saveRestaurantMenu = function () {
     document.getElementById('restaurantName')
             .value.trim();
 
-  const menuImage =
-    document.getElementById('menuImgUrl')
-            .value;
+const images = menuImages;
 
   if (!restaurantName) {
 
-    showToast('ادخلي اسم المطعم', 'err');
+    showToast('ادخل اسم المطعم', 'err');
 
     return;
   }
 
-  if (!menuImage) {
+if(!images.length) {
 
-    showToast('ارفعي صورة المنيو', 'err');
+    showToast('ارفع صورة المنيو', 'err');
 
     return;
   }
@@ -1008,7 +1002,7 @@ window.saveRestaurantMenu = function () {
 
     restaurantName,
 
-    menuImage,
+    menuImages: images,
 
     createdAt: Date.now()
 
@@ -1017,7 +1011,17 @@ window.saveRestaurantMenu = function () {
 
     showToast('تم حفظ المنيو بنجاح');
 
-    closeM('mRestaurantMenu');
+   menuImages = [];
+
+  const preview =
+    document.getElementById('menuPreviewGrid');
+
+  if(preview){
+    preview.innerHTML = '';
+  }
+
+  closeM('mRestaurantMenu');
+
 
   })
   .catch(() => {
@@ -1194,13 +1198,18 @@ function renderRestaurantMenus() {
 
       <div class="prev-card">
 
-        <div class="prev-img-wrap">
+         <div class="prev-img-wrap">
 
-          <img
-            src="${menu.menuImage}"
-            alt="${menu.restaurantName}">
+      <img
+        src="${menu.menuImages?.[0] || ''}"
+        alt="${menu.restaurantName}">
 
-        </div>
+      <div class="prev-badge-abs">
+        ${menu.menuImages?.length || 0} صفحات
+      </div>
+
+    </div>
+
 
         <div class="prev-body">
 
@@ -1353,14 +1362,7 @@ function updateCatSelects(data) {
         document.getElementById('oPrev').style.display = 'block';
         document.getElementById('oUZ').style.display   = 'none';
       } 
-      else if (type === 'menu') {
-
-  document.getElementById('menuImgUrl').value = url;
-
-  document.getElementById('menuPrevImg').src = url;
-
-  document.getElementById('menuPrev').style.display = 'block';
-}
+     
       else {
         document.getElementById('cImgUrl').value   = url;
         document.getElementById('cPrevImg').src     = url;
@@ -1375,7 +1377,51 @@ function updateCatSelects(data) {
       else         { catUploading   = false; lockSaveBtn('cat',   false); }
     }
   };
+var menuImages = [];
 
+window.uploadMenuImages = async function(input) {
+
+  const files = [...input.files];
+
+  if (!files.length) return;
+
+  menuImages = [];
+
+  const previewGrid =
+    document.getElementById('menuPreviewGrid');
+
+  if (previewGrid) {
+    previewGrid.innerHTML = '';
+  }
+
+  try {
+
+    for (const file of files) {
+
+      const url =
+        await cloudinaryUpload(file, 'menu');
+
+      menuImages.push(url);
+
+      if (previewGrid) {
+
+        previewGrid.innerHTML += `
+          <div class="img-preview-box">
+            <img src="${url}">
+          </div>
+        `;
+      }
+    }
+
+    showToast('تم رفع الصور بنجاح');
+
+  } catch (e) {
+
+    console.error(e);
+
+    showToast('فشل رفع الصور', 'err');
+  }
+};
   window.removeImg = function(type) {
     const isOffer = type === 'offer';
     if (isOffer) {
@@ -1486,12 +1532,19 @@ window.openRestaurantMenuModal = function () {
 
   document.getElementById('restaurantName').value = '';
 
-  document.getElementById('menuImgUrl').value = '';
+  menuImages = [];
 
-  document.getElementById('menuPrev').style.display = 'none';
+  const preview =
+    document.getElementById('menuPreviewGrid');
 
-  document.getElementById('mRestaurantMenu')
-          .classList.add('open');
+  if (preview) {
+    preview.innerHTML = '';
+  }
+
+  document
+    .getElementById('mRestaurantMenu')
+    .classList
+    .add('open');
 };
 
   window.editOffer = function(id) {
