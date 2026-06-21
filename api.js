@@ -4,7 +4,7 @@ import { getDatabase } from "https://www.gstatic.com/firebasejs/12.14.0/firebase
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
 
 // بيانات الاتصال الخاصة بمشروعك على Firebase
- const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyDrQSzTcME1eSRXCRFIZ7r5VvDSkhmOaS4",
     authDomain: "mr-delivery-4d789.firebaseapp.com",
     projectId: "mr-delivery-4d789",
