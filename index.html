@@ -805,7 +805,9 @@ img { display: block; max-width: 100%; }
           oninput="filterMenus()">
 
       </div>
-
+       <select class="filter-sel" id="menuCatFlt" onchange="filterMenus()">
+  <option value="">كل الأقسام</option>
+</select>
       <button
         class="btn btn-primary btn-sm"
         onclick="openRestaurantMenuModal()">
@@ -817,7 +819,8 @@ img { display: block; max-width: 100%; }
     </div>
 
   </div>
-
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px" id="menuCatChips"></div>
+<button class="btn btn-ghost btn-sm" onclick="openMenuCatModal()" style="margin-bottom:14px">＋ قسم منيو جديد</button>
   <div class="menu-scroll-outer">
     <button class="scroll-arrow arrow-prev" onclick="scrollMenus(-1)" title="السابق">&#8249;</button>
     <div class="menu-scroll-strip" id="restaurantMenusList"></div>
@@ -885,31 +888,18 @@ img { display: block; max-width: 100%; }
   </div>
 </div>
 
-<div class="overlay" id="mOffer" onclick="bgClose(event,'mOffer')">
-  <div class="modal">
-    <div class="modal-hdr">
-      <div class="modal-title" id="mOfferTitle">➕ عرض جديد</div>
-      <button class="modal-x" onclick="closeM('mOffer')">✕</button>
-    </div>
-
-    <div class="fg">
-      <label class="fl">📸 صورة العرض <span class="req">*</span></label>
-      <div class="upload-zone" id="oUZ">
-        <input type="file" accept="image/*" onchange="uploadImg(this,'offer')">
-        <div class="uz-icon">📸</div>
-        <div class="uz-text">اسحب صورة العرض هنا أو اضغط للاختيار</div>
-        <div class="uz-hint">مقاس مثالي 800×600 · أقل من 5 MB</div>
-      </div>
-      <div class="prog-wrap" id="oPW"><div class="prog-bar" id="oPB"></div></div>
-      <div class="prog-txt"  id="oPT"></div>
-      <div class="img-preview-box" id="oPrev" style="display:none">
-        <img id="oPrevImg" src="" alt="">
-        <div class="img-preview-overlay">
-          <button class="btn btn-ghost btn-sm" onclick="removeImg('offer')">🔄 تغيير الصورة</button>
-        </div>
-      </div>
-      <input type="hidden" id="oImgUrl">
-    </div>
+<div class="fg">
+  <label class="fl">📸 صور العرض <span class="req">*</span></label>
+  <div class="upload-zone" id="oUZ">
+    <input type="file" accept="image/*" multiple onchange="uploadOfferImages(this)">
+    <div class="uz-icon">📸</div>
+    <div class="uz-text">اسحب صور العرض هنا أو اضغط للاختيار (يمكن اختيار أكثر من صورة)</div>
+    <div class="uz-hint">مقاس مثالي 800×600 · أقل من 5 MB لكل صورة</div>
+  </div>
+  <div class="prog-wrap" id="oPW"><div class="prog-bar" id="oPB"></div></div>
+  <div class="prog-txt"  id="oPT"></div>
+  <div id="oPreviewGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:10px"></div>
+</div>
 
     <div class="fg">
       <label class="fl">اسم العرض <span class="req">*</span></label>
@@ -931,7 +921,10 @@ img { display: block; max-width: 100%; }
         <input class="fi" id="oOld" type="number" min="0" placeholder="90">
       </div>
     </div>
-
+<div class="fg" style="margin-top:16px">
+  <label class="fl">⏳ وقت انتهاء العرض (اختياري)</label>
+  <input class="fi" id="oExpiry" type="datetime-local">
+</div>
     <div class="fg" style="margin-top:16px">
       <label class="fl">القسم <span class="req">*</span></label>
       <select class="fs" id="oCat"></select>
@@ -972,7 +965,10 @@ img { display: block; max-width: 100%; }
         ✕
       </button>
     </div>
-
+<div class="fg">
+  <label class="fl">قسم المنيو <span class="req">*</span></label>
+  <select class="fs" id="menuCatSel"></select>
+</div>
     <div class="fg">
       <label class="fl">
         اسم المطعم <span class="req">*</span>
@@ -1040,6 +1036,26 @@ img { display: block; max-width: 100%; }
   </div>
 
 </div>
+<div class="overlay" id="mMenuCat" onclick="bgClose(event,'mMenuCat')">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">📂 قسم منيو</div>
+      <button class="modal-x" onclick="closeM('mMenuCat')">✕</button>
+    </div>
+    <div class="fg">
+      <label class="fl">اسم القسم <span class="req">*</span></label>
+      <input class="fi" id="mcName" placeholder="مثال: مطاعم شرقي">
+    </div>
+    <div class="fg">
+      <label class="fl">إيموجي</label>
+      <input class="fi" id="mcEmoji" placeholder="🍽️" value="🍽️">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeM('mMenuCat')">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveMenuCategory()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
 <div id="toastWrap"></div>
 
 <script>
@@ -1055,6 +1071,7 @@ img { display: block; max-width: 100%; }
   var offers = {};
   var restaurantMenus = {};
   var menuImages = [];
+  var offerImages = [];
 
   // التأكد من حالة اتصال فايربيز وتحديث الإشارة فوق على اليمين
   function checkFirebaseConnection() {
@@ -1095,7 +1112,14 @@ img { display: block; max-width: 100%; }
   const categoriesRef = ref(db, 'categories');
   const offersRef = ref(db, 'offers');
   const restaurantMenusRef = ref(db, 'restaurantMenus');
+const menuCategoriesRef = ref(db, 'menuCategories');
 
+onValue(menuCategoriesRef, (snapshot) => {
+  const data = snapshot.val() || {};
+  window.menuCategories = data;
+  renderMenuCatSelect(data);
+  renderMenuCatChips(data);
+});
   /* ══════════════════════════════════════
      الاستماع المباشر لقواعد البيانات (Firebase Listeners)
      ══════════════════════════════════════ */
@@ -1164,94 +1188,107 @@ img { display: block; max-width: 100%; }
   };
 
   // حفظ وتحديث العروض
-  window.saveOffer = function() {
-    const name = document.getElementById('oName').value.trim();
-    const place = document.getElementById('oPlace').value.trim();
-    const price = document.getElementById('oPrice').value;
-    const oldPrice = document.getElementById('oOld').value;
-    const catId = document.getElementById('oCat').value;
-    const imgUrl = document.getElementById('oImgUrl').value;
-    const badge = document.getElementById('oBadge').value.trim();
+window.saveOffer = function() {
+  const name = document.getElementById('oName').value.trim();
+  const place = document.getElementById('oPlace').value.trim();
+  const price = document.getElementById('oPrice').value;
+  const oldPrice = document.getElementById('oOld').value;
+  const catId = document.getElementById('oCat').value;
+  const badge = document.getElementById('oBadge').value.trim();
+  const expiryVal = document.getElementById('oExpiry').value;
 
-    if(!name || !price || !catId) { showToast('يرجى ملء الحقول الإلزامية (*)', 'err'); return; }
+  if(!name || !price || !catId) { showToast('يرجى ملء الحقول الإلزامية (*)', 'err'); return; }
+  if(!offerImages.length) { showToast('يرجى رفع صورة واحدة على الأقل للعرض', 'err'); return; }
 
-    const offerData = {
-      name, place, 
-      price: parseFloat(price), 
-      oldPrice: oldPrice ? parseFloat(oldPrice) : "", 
-      catId, imgUrl, badge,
-      timestamp: Date.now()
-    };
-
-    if(window.editMode && window.currentEditId) {
-      update(ref(db, `offers/${window.currentEditId}`), offerData)
-        .then(() => { showToast('تم تحديث العرض بنجاح'); closeM('mOffer'); })
-        .catch(() => showToast('حدث خطأ أثناء التحديث', 'err'));
-    } else {
-      const newOfferRef = push(offersRef);
-      set(newOfferRef, offerData)
-        .then(() => { showToast('تم إضافة العرض بنجاح'); closeM('mOffer'); })
-        .catch(() => showToast('حدث خطأ أثناء الحفظ', 'err'));
-    }
+  const offerData = {
+    name, place, 
+    price: parseFloat(price), 
+    oldPrice: oldPrice ? parseFloat(oldPrice) : "", 
+    catId, badge,
+    imgUrl: offerImages[0],
+    images: offerImages,
+    expiresAt: expiryVal ? new Date(expiryVal).getTime() : null,
+    timestamp: Date.now()
   };
-window.saveRestaurantMenu = function () {
 
-  const restaurantName =
-    document.getElementById('restaurantName')
-            .value.trim();
-
-const images = menuImages;
-
-  if (!restaurantName) {
-
-    showToast('ادخل اسم المطعم', 'err');
-
-    return;
+  if(window.editMode && window.currentEditId) {
+    update(ref(db, `offers/${window.currentEditId}`), offerData)
+      .then(() => { showToast('تم تحديث العرض بنجاح'); closeM('mOffer'); })
+      .catch(() => showToast('حدث خطأ أثناء التحديث', 'err'));
+  } else {
+    const newOfferRef = push(offersRef);
+    set(newOfferRef, offerData)
+      .then(() => { showToast('تم إضافة العرض بنجاح'); closeM('mOffer'); })
+      .catch(() => showToast('حدث خطأ أثناء الحفظ', 'err'));
   }
-
-if(!images.length) {
-
-    showToast('ارفع صورة المنيو', 'err');
-
-    return;
-  }
-
-  const newMenuRef =
-    push(restaurantMenusRef);
-
-  set(newMenuRef, {
-
-    restaurantName,
-
-    menuImages: images,
-
-    createdAt: Date.now()
-
-  })
-  .then(() => {
-
-    showToast('تم حفظ المنيو بنجاح');
-
-   menuImages = [];
-
-  const preview =
-    document.getElementById('menuPreviewGrid');
-
-  if(preview){
-    preview.innerHTML = '';
-  }
-
-  closeM('mRestaurantMenu');
-
-
-  })
-  .catch(() => {
-
-    showToast('حدث خطأ أثناء الحفظ', 'err');
-
-  });
 };
 
+
+window.toggleOfferVisibility = function(id) {
+  const off = window.offers[id];
+  update(ref(db, `offers/${id}`), { hidden: !off.hidden })
+    .then(() => showToast(off.hidden ? 'تم إظهار العرض' : 'تم إخفاء العرض'))
+    .catch(() => showToast('فشل التحديث', 'err'));
+};
+
+window.toggleCatVisibility = function(id) {
+  const cat = window.categories[id];
+  update(ref(db, `categories/${id}`), { hidden: !cat.hidden })
+    .then(() => showToast(cat.hidden ? 'تم إظهار القسم' : 'تم إخفاء القسم'))
+    .catch(() => showToast('فشل التحديث', 'err'));
+};
+
+window.toggleMenuVisibility = function(id) {
+  const menu = window.restaurantMenus[id];
+  update(ref(db, `restaurantMenus/${id}`), { hidden: !menu.hidden })
+    .then(() => showToast(menu.hidden ? 'تم إظهار المنيو' : 'تم إخفاء المنيو'))
+    .catch(() => showToast('فشل التحديث', 'err'));
+};
+
+   window.saveRestaurantMenu = function () {
+  const restaurantName = document.getElementById('restaurantName').value.trim();
+  const catId = document.getElementById('menuCatSel').value;
+  const images = menuImages;
+
+  if (!restaurantName) { showToast('ادخل اسم المطعم', 'err'); return; }
+  if (!catId) { showToast('اختر قسم المنيو', 'err'); return; }
+  if (!images.length) { showToast('ارفع صورة المنيو', 'err'); return; }
+
+  const newMenuRef = push(restaurantMenusRef);
+  set(newMenuRef, { restaurantName, catId, menuImages: images, createdAt: Date.now() })
+    .then(() => {
+      showToast('تم حفظ المنيو بنجاح');
+      menuImages = [];
+      const preview = document.getElementById('menuPreviewGrid');
+      if (preview) preview.innerHTML = '';
+      closeM('mRestaurantMenu');
+    })
+    .catch(() => showToast('حدث خطأ أثناء الحفظ', 'err'));
+};
+
+window.saveMenuCategory = function() {
+  const name = document.getElementById('mcName').value.trim();
+  const emoji = document.getElementById('mcEmoji').value.trim() || '🍽️';
+  if (!name) { showToast('ادخل اسم القسم', 'err'); return; }
+
+  if (window.mcEditId) {
+    update(ref(db, `menuCategories/${window.mcEditId}`), { name, emoji })
+      .then(() => { showToast('تم تحديث القسم'); closeM('mMenuCat'); window.mcEditId = null; })
+      .catch(() => showToast('فشل التحديث', 'err'));
+  } else {
+    set(push(menuCategoriesRef), { name, emoji })
+      .then(() => { showToast('تم إضافة القسم'); closeM('mMenuCat'); })
+      .catch(() => showToast('فشل الحفظ', 'err'));
+  }
+};
+
+window.deleteMenuCategory = function(id) {
+  if (confirm('هل تريد حذف هذا القسم؟')) {
+    remove(ref(db, `menuCategories/${id}`))
+      .then(() => showToast('تم حذف القسم'))
+      .catch(() => showToast('فشل الحذف', 'err'));
+  }
+};
 // تفعيل عمليات الحذف الفوري وتأكيدها عند الضغط على زر التاكيد بالمودال
   document.getElementById('confirmOk').onclick = function() {
     if(window.catToDelete) {
@@ -1378,13 +1415,15 @@ window.deleteMenuApi = function(id) {
     if (strip) strip.scrollBy({ left: dir * 280, behavior: 'smooth' });
   }
 
-  function filterMenus() {
-    const q = (document.getElementById('menuSearch')?.value || '').toLowerCase();
-    document.querySelectorAll('#restaurantMenusList .prev-card').forEach(card => {
-      const name = (card.querySelector('.prev-name')?.textContent || '').toLowerCase();
-      card.style.display = name.includes(q) ? '' : 'none';
-    });
-  }
+function filterMenus() {
+  const q = (document.getElementById('menuSearch')?.value || '').toLowerCase();
+  const cat = document.getElementById('menuCatFlt')?.value || '';
+  document.querySelectorAll('#restaurantMenusList .prev-card').forEach(card => {
+    const name = (card.querySelector('.prev-name')?.textContent || '').toLowerCase();
+    const matchCat = !cat || card.getAttribute('data-cat') === cat;
+    card.style.display = (name.includes(q) && matchCat) ? '' : 'none';
+  });
+}
 
   function renderCategories(data) {
     const grid = document.getElementById('catGrid');
@@ -1398,34 +1437,36 @@ window.deleteMenuApi = function(id) {
       return;
     }
 
-    keys.forEach(key => {
-      const cat = data[key];
-      
-      let offerCount = 0;
-      if (window.offers) {
-        offerCount = Object.values(window.offers).filter(o => o.catId === key).length;
-      }
+   keys.forEach(key => {
+  const cat = data[key];
 
-      let bgStyle = cat.imgUrl ? '' : `background:${cat.color || 'var(--bg3)'}`;
-      let coverClass = 'cat-cover' + (cat.imgUrl ? ' img-skeleton' : '');
-      let mediaContent = cat.imgUrl
-        ? `<img class="lazy-img" src="${cat.imgUrl}" loading="lazy" decoding="async"
-             onload="this.classList.add('loaded');const p=this.closest('.img-skeleton');if(p)p.classList.remove('img-skeleton')">`
-        : `<div class="cat-cover-emoji">${cat.emoji || '🍔'}</div>`;
+  let offerCount = 0;
+  if (window.offers) {
+    offerCount = Object.values(window.offers).filter(o => o.catId === key).length;
+  }
 
-      grid.innerHTML += `
-        <div class="cat-card">
-          <div class="${coverClass}" style="${bgStyle}">${mediaContent}</div>
-          <div class="cat-body">
-            <div class="cat-name">${cat.name}</div>
-            <div class="cat-meta">عدد العروض: ${offerCount}</div>
-            <div class="cat-actions">
-              <button class="btn btn-ghost btn-sm" style="flex:1" onclick="editCat('${key}')">✏️</button>
-              <button class="btn btn-danger btn-sm" onclick="triggerDeleteCat('${key}')">🗑️</button>
-            </div>
-          </div>
-        </div>`;
-    });
+  let bgStyle = cat.imgUrl ? '' : `background:${cat.color || 'var(--bg3)'}`;
+  let coverClass = 'cat-cover' + (cat.imgUrl ? ' img-skeleton' : '');
+  let mediaContent = cat.imgUrl
+    ? `<img class="lazy-img" src="${cat.imgUrl}" loading="lazy" decoding="async"
+         onload="this.classList.add('loaded');const p=this.closest('.img-skeleton');if(p)p.classList.remove('img-skeleton')">`
+    : `<div class="cat-cover-emoji">${cat.emoji || '🍔'}</div>`;
+
+  grid.innerHTML += `
+    <div class="cat-card" style="${cat.hidden ? 'opacity:.5' : ''}">
+      <div class="${coverClass}" style="${bgStyle}">${mediaContent}</div>
+      <div class="cat-body">
+        <div class="cat-name">${cat.name} ${cat.hidden ? `<span class="badge badge-red">مخفي</span>` : ''}</div>
+        <div class="cat-meta">عدد العروض: ${offerCount}</div>
+        <div class="cat-actions">
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="editCat('${key}')">✏️</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleCatVisibility('${key}')" title="${cat.hidden ? 'إظهار' : 'إخفاء'}">${cat.hidden ? '🙈' : '👁️'}</button>
+          <button class="btn btn-danger btn-sm" onclick="triggerDeleteCat('${key}')">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+});
+
   }
 
   function renderOffers(data) {
@@ -1448,30 +1489,35 @@ window.deleteMenuApi = function(id) {
         onload="this.classList.add('loaded')">`;
 
     let html = '';
-    keys.forEach(key => {
-      const off = data[key];
-      const catName = window.categories && window.categories[off.catId] ? window.categories[off.catId].name : 'قسم غير معروف';
+keys.forEach(key => {
+  const off = data[key];
+  const catName = window.categories && window.categories[off.catId] ? window.categories[off.catId].name : 'قسم غير معروف';
+  const isExpired = off.expiresAt && off.expiresAt <= Date.now();
+  const expiryTxt = off.expiresAt ? `<span class="badge ${isExpired ? 'badge-red' : 'badge-amber'}">⏳ ${new Date(off.expiresAt).toLocaleString('ar-EG', {dateStyle:'short', timeStyle:'short'})}${isExpired ? ' (منتهي)' : ''}</span>` : '';
 
-      html += `
-        <div class="offer-row" data-cat="${off.catId}" data-name="${off.name.toLowerCase()}">
-          ${off.imgUrl ? lazyThumb(off.imgUrl) : `<div class="offer-no-img">📸</div>`}
-          <div class="offer-info">
-            <div class="offer-name">${off.name} ${off.badge ? `<span class="badge badge-or">${off.badge}</span>` : ''}</div>
-            <div class="offer-meta">
-              <span>📍 ${off.place || 'المتجر'}</span> •
-              <span class="badge badge-blue">📂 ${catName}</span>
-            </div>
-          </div>
-          <div class="offer-price-col">
-            <div class="offer-price">${off.price} ج</div>
-            ${off.oldPrice ? `<div class="offer-old">${off.oldPrice} ج</div>` : ''}
-          </div>
-          <div class="offer-actions">
-            <button class="btn btn-ghost btn-sm" onclick="editOffer('${key}')">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="triggerDeleteOffer('${key}')">🗑️</button>
-          </div>
-        </div>`;
-    });
+  html += `
+    <div class="offer-row" data-cat="${off.catId}" data-name="${off.name.toLowerCase()}" style="${off.hidden ? 'opacity:.5' : ''}">
+      ${off.imgUrl ? lazyThumb(off.imgUrl) : `<div class="offer-no-img">📸</div>`}
+      <div class="offer-info">
+        <div class="offer-name">${off.name} ${off.badge ? `<span class="badge badge-or">${off.badge}</span>` : ''} ${off.hidden ? `<span class="badge badge-red">مخفي</span>` : ''}</div>
+        <div class="offer-meta">
+          <span>📍 ${off.place || 'المتجر'}</span> •
+          <span class="badge badge-blue">📂 ${catName}</span>
+          ${expiryTxt}
+        </div>
+      </div>
+      <div class="offer-price-col">
+        <div class="offer-price">${off.price} ج</div>
+        ${off.oldPrice ? `<div class="offer-old">${off.oldPrice} ج</div>` : ''}
+      </div>
+      <div class="offer-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editOffer('${key}')">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleOfferVisibility('${key}')" title="${off.hidden ? 'إظهار' : 'إخفاء'}">${off.hidden ? '🙈' : '👁️'}</button>
+        <button class="btn btn-danger btn-sm" onclick="triggerDeleteOffer('${key}')">🗑️</button>
+      </div>
+    </div>`;
+});
+
     list.innerHTML = html;
 
     const sorted = keys.map(k => ({id:k, ...data[k]})).sort((a,b) => b.timestamp - a.timestamp).slice(0, 3);
@@ -1495,55 +1541,85 @@ function renderRestaurantMenus() {
   if (!list) return;
 
   const allMenus = window.restaurantMenus || {};
-  const mCntEl  = document.getElementById('mCnt');
+  const cats = window.menuCategories || {};
+  const mCntEl = document.getElementById('mCnt');
   if (mCntEl) mCntEl.innerText = Object.keys(allMenus).length;
 
   const menus = Object.entries(allMenus);
 
   if (menus.length === 0) {
-    list.innerHTML = `
-      <div class="empty-state" style="width:100%">
-        <div class="ei">📋</div>
-        <p>لا توجد منيوهات مضافة</p>
-      </div>`;
+    list.innerHTML = `<div class="empty-state" style="width:100%"><div class="ei">📋</div><p>لا توجد منيوهات مضافة</p></div>`;
     return;
   }
 
   let html = '';
-  menus.forEach(([id, menu]) => {
-    const images = menu.menuImages || [];
+ menus.forEach(([id, menu]) => {
+  const images = menu.menuImages || [];
+  const catName = cats[menu.catId] ? cats[menu.catId].name : 'بدون قسم';
 
-    const carouselImgs = images.length
-      ? images.map(url =>
-          `<img class="lazy-img" src="${url}" alt="${menu.restaurantName}"
-            loading="lazy" decoding="async"
-            onload="this.classList.add('loaded')">`
-        ).join('')
-      : `<div class="menu-empty-icon">🍽️</div>`;
+  const carouselImgs = images.length
+    ? images.map(url => `<img class="lazy-img" src="${url}" alt="${menu.restaurantName}" loading="lazy" decoding="async" onload="this.classList.add('loaded')">`).join('')
+    : `<div class="menu-empty-icon">🍽️</div>`;
 
-    html += `
-      <div class="prev-card" id="menu-card-${id}">
-        <div class="menu-img-rel">
-          <div class="menu-img-carousel">${carouselImgs}</div>
-          ${images.length > 1
-            ? `<div class="menu-pages-pill">📄 ${images.length} صفحات</div>`
-            : ''}
-        </div>
-        <div class="prev-body">
-          <div class="menu-card-header-flex">
-            <div>
-              <div class="prev-name" style="font-size: 1.05rem; font-weight: 800;">${menu.restaurantName}</div>
-              <div class="prev-place">${images.length} ${images.length === 1 ? 'صورة' : 'صور'}</div>
-            </div>
+  html += `
+    <div class="prev-card" id="menu-card-${id}" data-cat="${menu.catId || ''}" style="${menu.hidden ? 'opacity:.5' : ''}">
+      <div class="menu-img-rel">
+        <div class="menu-img-carousel">${carouselImgs}</div>
+        ${images.length > 1 ? `<div class="menu-pages-pill">📄 ${images.length} صفحات</div>` : ''}
+      </div>
+      <div class="prev-body">
+        <div class="menu-card-header-flex">
+          <div>
+            <div class="prev-name" style="font-size: 1.05rem; font-weight: 800;">${menu.restaurantName} ${menu.hidden ? `<span class="badge badge-red">مخفي</span>` : ''}</div>
+            <div class="prev-place">📂 ${catName} · ${images.length} ${images.length === 1 ? 'صورة' : 'صور'}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="toggleMenuVisibility('${id}')" title="${menu.hidden ? 'إظهار' : 'إخفاء'}">${menu.hidden ? '🙈' : '👁️'}</button>
             <button class="btn-delete-menu" onclick="deleteMenuApi('${id}')">🗑️ حذف</button>
           </div>
         </div>
-      </div>`;
-  });
-
+      </div>
+    </div>`;
+});
   list.innerHTML = html;
 }
 
+
+function renderMenuCatSelect(data) {
+  const sel = document.getElementById('menuCatSel');
+  const filt = document.getElementById('menuCatFlt');
+  const opts = Object.keys(data).map(k => `<option value="${k}">${data[k].name}</option>`).join('');
+  if (sel) sel.innerHTML = '<option value="" disabled selected>اختر القسم...</option>' + opts;
+  if (filt) filt.innerHTML = '<option value="">كل الأقسام</option>' + opts;
+}
+
+function renderMenuCatChips(data) {
+  const wrap = document.getElementById('menuCatChips');
+  if (!wrap) return;
+  const keys = Object.keys(data);
+  if (keys.length === 0) { wrap.innerHTML = `<span style="color:var(--muted);font-size:.8rem">لا توجد أقسام بعد</span>`; return; }
+  wrap.innerHTML = keys.map(k => `
+    <span class="badge badge-blue" style="cursor:pointer;padding:5px 10px" onclick="editMenuCategory('${k}')">
+      ${data[k].emoji || '🍽️'} ${data[k].name}
+      <button onclick="event.stopPropagation();deleteMenuCategory('${k}')" style="background:none;border:none;color:var(--red);margin-right:4px;cursor:pointer">✕</button>
+    </span>
+  `).join('');
+}
+
+window.editMenuCategory = function(id) {
+  window.mcEditId = id;
+  const cat = window.menuCategories[id];
+  document.getElementById('mcName').value = cat.name;
+  document.getElementById('mcEmoji').value = cat.emoji || '🍽️';
+  document.getElementById('mMenuCat').classList.add('open');
+};
+
+window.openMenuCatModal = function() {
+  window.mcEditId = null;
+  document.getElementById('mcName').value = '';
+  document.getElementById('mcEmoji').value = '🍽️';
+  document.getElementById('mMenuCat').classList.add('open');
+};
 function updateCatSelects(data) {
     const filter = document.getElementById('catFlt');
     const formSel = document.getElementById('oCat');
@@ -1696,6 +1772,40 @@ function updateCatSelects(data) {
   };
 var menuImages = [];
 
+window.uploadOfferImages = async function(input) {
+  const files = [...input.files];
+  if (!files.length) return;
+
+  const previewGrid = document.getElementById('oPreviewGrid');
+
+  try {
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) { showToast(`الصورة ${file.name} أكبر من 5MB`, 'err'); continue; }
+      const url = await cloudinaryUpload(file, 'offer');
+      offerImages.push(url);
+      if (previewGrid) {
+        previewGrid.innerHTML += `
+          <div class="img-preview-box" style="margin-top:0">
+            <img src="${url}" style="height:90px">
+            <div class="img-preview-overlay">
+              <button class="btn btn-ghost btn-sm" onclick="removeOfferImage('${url}', this)">🗑️</button>
+            </div>
+          </div>`;
+      }
+    }
+    showToast('تم رفع الصور بنجاح');
+  } catch (e) {
+    console.error(e);
+    showToast('فشل رفع بعض الصور', 'err');
+  }
+};
+
+window.removeOfferImage = function(url, btnEl) {
+  offerImages = offerImages.filter(u => u !== url);
+  const box = btnEl.closest('.img-preview-box');
+  if (box) box.remove();
+};
+
 window.uploadMenuImages = async function(input) {
 
   const files = [...input.files];
@@ -1739,22 +1849,15 @@ window.uploadMenuImages = async function(input) {
     showToast('فشل رفع الصور', 'err');
   }
 };
-  window.removeImg = function(type) {
-    const isOffer = type === 'offer';
-    if (isOffer) {
-      document.getElementById('oImgUrl').value       = '';
-      document.getElementById('oPrev').style.display  = 'none';
-      document.getElementById('oUZ').style.display    = 'block';
-      if(document.getElementById('oPT')) document.getElementById('oPT').style.display = 'none';
-      if(document.getElementById('oPW')) document.getElementById('oPW').style.display = 'none';
-    } else {
-      document.getElementById('cImgUrl').value       = '';
-      document.getElementById('cPrev').style.display  = 'none';
-      document.getElementById('cUZ').style.display    = 'block';
-      if(document.getElementById('cPT')) document.getElementById('cPT').style.display = 'none';
-      if(document.getElementById('cPW')) document.getElementById('cPW').style.display = 'none';
-    }
-  };
+
+window.removeImg = function(type) {
+  if (type === 'offer') return;
+  document.getElementById('cImgUrl').value       = '';
+  document.getElementById('cPrev').style.display  = 'none';
+  document.getElementById('cUZ').style.display    = 'block';
+  if(document.getElementById('cPT')) document.getElementById('cPT').style.display = 'none';
+  if(document.getElementById('cPW')) document.getElementById('cPW').style.display = 'none';
+};
 
   function lockSaveBtn(type, lock) {
     const btn = document.getElementById(type === 'offer' ? 'saveOfferBtn' : 'saveCatBtn');
@@ -1834,55 +1937,65 @@ window.uploadMenuImages = async function(input) {
     document.getElementById('mCat').classList.add('open');
   }
 
-  window.openOfferModal = function() {
-    window.editMode = false; window.currentEditId = null;
-    document.getElementById('mOfferTitle').innerText = '➕ عرض جديد';
-    document.getElementById('oName').value = '';
-    document.getElementById('oPlace').value = '';
-    document.getElementById('oPrice').value = '';
-    document.getElementById('oOld').value = '';
-    document.getElementById('oBadge').value = '';
-    removeImg('offer');
-    document.getElementById('mOffer').classList.add('open');
-  }
+window.openOfferModal = function() {
+  window.editMode = false; window.currentEditId = null;
+  document.getElementById('mOfferTitle').innerText = '➕ عرض جديد';
+  document.getElementById('oName').value = '';
+  document.getElementById('oPlace').value = '';
+  document.getElementById('oPrice').value = '';
+  document.getElementById('oOld').value = '';
+  document.getElementById('oBadge').value = '';
+  document.getElementById('oExpiry').value = '';
+  offerImages = [];
+  const grid = document.getElementById('oPreviewGrid');
+  if (grid) grid.innerHTML = '';
+  document.getElementById('mOffer').classList.add('open');
+}
+
+
+
 window.openRestaurantMenuModal = function () {
-
   document.getElementById('restaurantName').value = '';
-
+  document.getElementById('menuCatSel').value = '';
   menuImages = [];
-
-  const preview =
-    document.getElementById('menuPreviewGrid');
-
-  if (preview) {
-    preview.innerHTML = '';
-  }
-
-  document
-    .getElementById('mRestaurantMenu')
-    .classList
-    .add('open');
+  const preview = document.getElementById('menuPreviewGrid');
+  if (preview) preview.innerHTML = '';
+  document.getElementById('mRestaurantMenu').classList.add('open');
 };
 
-  window.editOffer = function(id) {
-    window.editMode = true; window.currentEditId = id;
-    const off = window.offers[id];
-    document.getElementById('mOfferTitle').innerText = '✏️ تعديل العرض';
-    document.getElementById('oName').value = off.name;
-    document.getElementById('oPlace').value = off.place || '';
-    document.getElementById('oPrice').value = off.price;
-    document.getElementById('oOld').value = off.oldPrice || '';
-    document.getElementById('oCat').value = off.catId;
-    document.getElementById('oBadge').value = off.badge || '';
-    if(off.imgUrl) {
-      document.getElementById('oImgUrl').value = off.imgUrl;
-      document.getElementById('oPrevImg').src = off.imgUrl;
-      document.getElementById('oPrev').style.display = 'block';
-      document.getElementById('oUZ').style.display = 'none';
-    } else { removeImg('offer'); }
-    document.getElementById('mOffer').classList.add('open');
+window.editOffer = function(id) {
+  window.editMode = true; window.currentEditId = id;
+  const off = window.offers[id];
+  document.getElementById('mOfferTitle').innerText = '✏️ تعديل العرض';
+  document.getElementById('oName').value = off.name;
+  document.getElementById('oPlace').value = off.place || '';
+  document.getElementById('oPrice').value = off.price;
+  document.getElementById('oOld').value = off.oldPrice || '';
+  document.getElementById('oCat').value = off.catId;
+  document.getElementById('oBadge').value = off.badge || '';
+  document.getElementById('oExpiry').value = off.expiresAt ? toDatetimeLocal(off.expiresAt) : '';
+
+  offerImages = (off.images && off.images.length) ? [...off.images] : (off.imgUrl ? [off.imgUrl] : []);
+  const grid = document.getElementById('oPreviewGrid');
+  if (grid) {
+    grid.innerHTML = offerImages.map(url => `
+      <div class="img-preview-box" style="margin-top:0">
+        <img src="${url}" style="height:90px">
+        <div class="img-preview-overlay">
+          <button class="btn btn-ghost btn-sm" onclick="removeOfferImage('${url}', this)">🗑️</button>
+        </div>
+      </div>`).join('');
   }
 
+  document.getElementById('mOffer').classList.add('open');
+}
+
+
+function toDatetimeLocal(ts) {
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
   window.triggerDeleteCat = function(id) {
     window.catToDelete = id; window.offerToDelete = null;
     document.getElementById('confirmMsg').innerText = `هل أنت متأكد من حذف هذا القسم؟ سيتم حذف البيانات المرتبطة به نهائياً.`;
