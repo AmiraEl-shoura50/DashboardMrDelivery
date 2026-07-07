@@ -965,7 +965,7 @@ img { display: block; max-width: 100%; }
   <div class="modal">
 
     <div class="modal-hdr">
-      <div class="modal-title">📋 إضافة منيو مطعم</div>
+      <div class="modal-title" id="mRestaurantMenuTitle">📋 إضافة منيو مطعم</div>
 
       <button class="modal-x"
               onclick="closeM('mRestaurantMenu')">
@@ -1252,7 +1252,7 @@ window.toggleMenuVisibility = function(id) {
     .catch(() => showToast('فشل التحديث', 'err'));
 };
 
-   window.saveRestaurantMenu = function () {
+window.saveRestaurantMenu = function () {
   const restaurantName = document.getElementById('restaurantName').value.trim();
   const catId = document.getElementById('menuCatSel').value;
   const images = menuImages;
@@ -1261,18 +1261,30 @@ window.toggleMenuVisibility = function(id) {
   if (!catId) { showToast('اختر قسم المنيو', 'err'); return; }
   if (!images.length) { showToast('ارفع صورة المنيو', 'err'); return; }
 
-  const newMenuRef = push(restaurantMenusRef);
-  set(newMenuRef, { restaurantName, catId, menuImages: images, createdAt: Date.now() })
-    .then(() => {
-      showToast('تم حفظ المنيو بنجاح');
-      menuImages = [];
-      const preview = document.getElementById('menuPreviewGrid');
-      if (preview) preview.innerHTML = '';
-      closeM('mRestaurantMenu');
-    })
-    .catch(() => showToast('حدث خطأ أثناء الحفظ', 'err'));
+  if (window.menuEditId) {
+    update(ref(db, `restaurantMenus/${window.menuEditId}`), { restaurantName, catId, menuImages: images })
+      .then(() => {
+        showToast('تم تحديث المنيو بنجاح');
+        menuImages = [];
+        window.menuEditId = null;
+        const preview = document.getElementById('menuPreviewGrid');
+        if (preview) preview.innerHTML = '';
+        closeM('mRestaurantMenu');
+      })
+      .catch(() => showToast('حدث خطأ أثناء التحديث', 'err'));
+  } else {
+    const newMenuRef = push(restaurantMenusRef);
+    set(newMenuRef, { restaurantName, catId, menuImages: images, createdAt: Date.now() })
+      .then(() => {
+        showToast('تم حفظ المنيو بنجاح');
+        menuImages = [];
+        const preview = document.getElementById('menuPreviewGrid');
+        if (preview) preview.innerHTML = '';
+        closeM('mRestaurantMenu');
+      })
+      .catch(() => showToast('حدث خطأ أثناء الحفظ', 'err'));
+  }
 };
-
 window.saveMenuCategory = function() {
   const name = document.getElementById('mcName').value.trim();
   const emoji = document.getElementById('mcEmoji').value.trim() || '🍽️';
@@ -1580,10 +1592,11 @@ function renderRestaurantMenus() {
             <div class="prev-name" style="font-size: 1.05rem; font-weight: 800;">${menu.restaurantName} ${menu.hidden ? `<span class="badge badge-red">مخفي</span>` : ''}</div>
             <div class="prev-place">📂 ${catName} · ${images.length} ${images.length === 1 ? 'صورة' : 'صور'}</div>
           </div>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-ghost btn-sm" onclick="toggleMenuVisibility('${id}')" title="${menu.hidden ? 'إظهار' : 'إخفاء'}">${menu.hidden ? '🙈' : '👁️'}</button>
-            <button class="btn-delete-menu" onclick="deleteMenuApi('${id}')">🗑️ حذف</button>
-          </div>
+         <div style="display:flex;gap:6px">
+  <button class="btn btn-ghost btn-sm" onclick="editRestaurantMenu('${id}')" title="تعديل">✏️</button>
+  <button class="btn btn-ghost btn-sm" onclick="toggleMenuVisibility('${id}')" title="${menu.hidden ? 'إظهار' : 'إخفاء'}">${menu.hidden ? '🙈' : '👁️'}</button>
+  <button class="btn-delete-menu" onclick="deleteMenuApi('${id}')">🗑️ حذف</button>
+</div>
         </div>
       </div>
     </div>`;
@@ -1962,11 +1975,34 @@ window.openOfferModal = function() {
 
 
 window.openRestaurantMenuModal = function () {
+  window.menuEditId = null;
   document.getElementById('restaurantName').value = '';
   document.getElementById('menuCatSel').value = '';
+  document.getElementById('mRestaurantMenuTitle').innerText = '📋 إضافة منيو مطعم';
   menuImages = [];
   const preview = document.getElementById('menuPreviewGrid');
   if (preview) preview.innerHTML = '';
+  document.getElementById('mRestaurantMenu').classList.add('open');
+};
+
+window.editRestaurantMenu = function (id) {
+  const menu = window.restaurantMenus[id];
+  if (!menu) return;
+
+  window.menuEditId = id;
+  document.getElementById('restaurantName').value = menu.restaurantName || '';
+  document.getElementById('menuCatSel').value = menu.catId || '';
+  document.getElementById('mRestaurantMenuTitle').innerText = '✏️ تعديل منيو مطعم';
+
+  menuImages = [...(menu.menuImages || [])];
+  const preview = document.getElementById('menuPreviewGrid');
+  if (preview) {
+    preview.innerHTML = menuImages.map(url => `
+      <div class="img-preview-box">
+        <img src="${url}">
+      </div>`).join('');
+  }
+
   document.getElementById('mRestaurantMenu').classList.add('open');
 };
 
